@@ -1,0 +1,256 @@
+% TEI.tex -- Make TeX understand TEI formatted files (in a very limited way).
+% copyright 1994, 1999 Jeroen Hellingman. This work may be distributed under the
+% conditions of the GNU General Public License.
+%
+% NOTICE: this is a work in progress, and is still buggy in many ways. This
+% approach will always be limited in what can be done, and depends on a number
+% of conventions being used.
+%
+% known problems:
+%   1. page breaks just after headers.
+%   2. extra empty lines around paragraphs when they coincide with other tags.
+%
+% history:
+%   13-AUG-1999 minor changes.
+%   06-JUL-1999 changed <p> handling.
+%   26-JUN-1999 made advance of footnote counter global (JH)
+
+%% fonts I would like to use:
+
+\font\rmVII=cmr7
+\font\itVII=cmti7
+\font\rmVIII=cmr8
+\font\rmXII=cmr12
+\font\bfXII=cmbx12
+\font\bfXVII=cmbx12 at 17pt
+\font\sc=cmcsc10
+
+\input fontsize.tex
+\tenpoint
+
+\overfullrule=0pt
+\parindent=0pt
+\raggedbottom
+
+%% load generic SGML macros
+
+\input SGML.tex
+
+%% Generally useful macros
+
+\def\today{\the\day\ \ifcase\month\relax\or January\or
+February\or March\or April\or May\or June\or July\or August\or
+September\or October\or November\or December\fi\ \the\year}
+
+\def\vandaag{\the\day\ \ifcase\month\relax\or januari\or
+februari\or maart\or april\or mei\or juni\or juli\or augustus\or
+september\or oktober\or november\or december\fi\ \the\year}
+
+%% title page
+
+\SGMLelement{docTitle}{\bgroup\bf}{\egroup\bigskip}
+
+%% special parts of chapters
+
+\SGMLelement{trailer}{\vfill}{\relax}
+
+\SGMLelement{argument}{\medskip\bgroup\noexpand\ninepoint\advance\leftskip by1cm%
+  \advance\rightskip by1cm}{\bigskip\egroup}
+
+%% paragraphs and lines
+
+%% The following is still a bit buggy. It would be best to give a \par at every
+%% </p> tag, but, unfortunately, that tag is often omitted. We now use a small
+%% trick to leave horizontal mode.
+%\SGMLelement{p}{\vskip0pt\hskip0pt}{\relax}     % <p> will start a new paragraph
+
+%% We rely on the source containing a double newline after each paragraph, to
+%% obtain better formatting with TeX. Ignore the <p> tag for now.
+%% Best would be to relay on the presence of </p>
+\SGMLelement{p}{\relax}{\relax}
+
+\SGMLelement{lg}{\medskip}{\medskip}
+\SGMLelement{l}{\hfill\break}{\relax}
+
+%% highlighting
+%%
+%% use \noexpand to allow later redefinition of \it to be visible after this
+%% macro has been defined.
+
+\SGMLelement{hi}{\bgroup\noexpand\it}{\/\egroup}
+
+%% additional typographic tags, not from TEI, but used in intermediate files. Technically, we should
+%% use the rend attribute, but that is difficult.
+
+\SGMLelement{sc}{\bgroup\noexpand\sc}{\egroup}
+\SGMLelement{b}{\bgroup\noexpand\bf}{\egroup}
+\SGMLelement{i}{\bgroup\noexpand\it}{\egroup}
+
+%% divisions and headers
+
+\newcount\divZeroCount\divZeroCount=0
+\newcount\divOneCount\divOneCount=0
+\newcount\divTwoCount\divTwoCount=0
+\newcount\divThreeCount\divThreeCount=0
+\newcount\divFourCount\divFourCount=0
+\newcount\divFiveCount\divFiveCount=0
+\def\conditionalDivZeroCount{\ifnum\divZeroCount=0\relax\else\the\divZeroCount.\fi}
+\newcount\divLevel\divLevel=0   % level of <div#> tag
+
+\def\resetDivNumbers{\divZeroCount=0\divOneCount=0\divTwoCount=0\divThreeCount=0
+  \divFourCount=0\divFiveCount=0}
+
+\def\beginDivZero{\divLevel=0
+  \global\advance\divZeroCount by1
+  \global\divOneCount=0
+  \global\divTwoCount=0
+  \global\divThreeCount=0
+  \global\divFourCount=0
+  \global\divFiveCount=0}
+\def\beginDivOne{\divLevel=1
+  \global\advance\divOneCount by1
+  \global\divTwoCount=0
+  \global\divThreeCount=0
+  \global\divFourCount=0
+  \global\divFiveCount=0}
+\def\beginDivTwo{\divLevel=2
+  \global\advance\divTwoCount by1
+  \global\divThreeCount=0
+  \global\divFourCount=0
+  \global\divFiveCount=0}
+\def\beginDivThree{\divLevel=3
+  \global\advance\divThreeCount by1
+  \global\divFourCount=0
+  \global\divFiveCount=0}
+\def\beginDivFour{\divLevel=4
+  \global\advance\divFourCount by1
+  \global\divFiveCount=0}
+\def\beginDivFive{\divLevel=5
+  \global\advance\divFiveCount by1}
+
+\def\endDiv{\advance\divLevel by-1}
+
+\SGMLelement{div0}{\beginDivZero}{\endDiv}
+\SGMLelement{div1}{\beginDivOne}{\endDiv}
+\SGMLelement{div2}{\beginDivTwo}{\endDiv}
+\SGMLelement{div3}{\beginDivThree}{\endDiv}
+\SGMLelement{div4}{\beginDivFour}{\endDiv}
+\SGMLelement{div5}{\beginDivFive}{\endDiv}
+
+\SGMLelement{head}{\beginTeiHead}{\endTeiHead}
+
+\def\beginTeiHead{\ifcase\divLevel \headZero\or\headOne\or\headTwo\or\headThree
+    \or\headFour\or\headFive\or\headOther\fi}
+\def\endTeiHead{\egroup\medskip\divLevel=6\nobreak} %% HACK: only first head after <div#> should be big
+\def\headZero{\goodbreak\bigskip\bgroup\bfXVII\noindent
+  \the\divZeroCount\ \ }
+\def\headOne{\goodbreak\bigskip\bgroup\bfXVII\noindent
+  \conditionalDivZeroCount\the\divOneCount\ \ }
+\def\headTwo{\goodbreak\bigskip\bgroup\bfXII\noindent
+  \conditionalDivZeroCount\the\divOneCount.\the\divTwoCount\ \ }
+\def\headThree{\goodbreak\bigskip\bgroup\it\noindent
+  \conditionalDivZeroCount\the\divOneCount.\the\divTwoCount.\the\divThreeCount\ \ }
+\def\headFour{\goodbreak\medskip\bgroup\it\noindent}
+\def\headFive{\goodbreak\medskip\bgroup\it\noindent}
+\def\headOther{\medskip\goodbreak\bgroup\it\noindent}
+
+%% notes in the margin
+
+\newdimen\leftmarginwidth\leftmarginwidth=1.5cm
+
+\def\leftnote#1{\leavevmode\vadjust{\handlebox{#1}}}
+\def\handlebox#1{\vbox{\setbox1=\vtop{\kern-\baselineskip%
+    \hsize=\leftmarginwidth\parindent=0pt%
+    \advance\hsize by -0.25 cm\leftskip=-1pt%
+    \raggedright\tolerance=1000#1}
+  \dp1=0pt \ht1=0pt \llap{\hbox to \leftmarginwidth{\box1\hfil}}}}
+
+%% original pagenumbers (placed in margin)
+
+%\def\pageBreak{{ \bf[p.~\theAttr{n}] }\message{<\theAttr{n}>}}
+\def\pageBreak{\leftnote{\rmVII p. \theAttr{n}}\message{<\theAttr{n}>}}
+
+\SGMLelement{pb}{\pageBreak}{\relax}
+
+%% notes in right margin
+
+\newdimen\rightmarginwidth\rightmarginwidth=1.5cm
+
+\def\rightnote#1{\leavevmode\vadjust{\handlerightbox{#1}}}
+\def\handlerightbox#1{\vbox{\setbox1=\vtop{\kern-\baselineskip%
+    \hsize=\rightmarginwidth\parindent=0pt%
+    \advance\hsize by -0.25 cm\leftskip=-1pt%
+    \raggedright\tolerance=1000#1}
+  \dp1=0pt \ht1=0pt \rlap{\hbox to \hsize{\hfil\rlap{\kern0.25cm\box1}}}}}
+
+%% corrections in the right margin
+
+\def\correction{\rightnote{\rmVII[\theAttr{sic}]}}
+\def\nocorrection{\rightnote{\itVII(sic)}}
+\SGMLelement{corr}{\correction}{\noexpand\setAttrTo{sic}{\relax}}
+\SGMLelement{sic}{\nocorrection}{\relax}
+
+%% cross references (target placed in right margin)
+
+\SGMLelement{ref}{\relax}{\rightnote{\noexpand\eightpoint$\rightarrow$ \sevenrm\theAttr{target}}}
+
+%% footnotes
+
+%% from the TeXbook:
+\catcode`@=11
+\def\footnote#1{\edef\@sf{\spacefactor\the\spacefactor}#1\@sf
+ \insert\footins\bgroup\eightpoint
+ \interlinepenalty100\let\par=\endgraf
+ \leftskip=0pt\rightskip=0pt
+ \splittopskip=10pt plus 1pt minus 1pt \floatingpenalty=20000
+ \smallskip\item{#1}\bgroup\strut\aftergroup\@foot\let\next}
+\skip\footins=12pt plus 2pt minus 4pt \dimen\footins=8in
+\catcode`@=12
+
+%% counting from the start of the document
+\newcount\noteNumber\noteNumber=0
+\def\note{\global\advance\noteNumber by1\footnote{$^{\the\noteNumber}$}\bgroup}
+
+%% using the original note numbers
+%\def\note{\footnote{$^{\theAttr{n}}$}\bgroup\rm}
+
+\SGMLelement{note}{\note}{\egroup}
+
+%% main parts of text
+
+\SGMLelement{text}{\global\pageno=-1\resetDivNumbers\noteNumber=0\vfill\eject}{\relax}   % start text on new page
+\SGMLelement{body}{\global\pageno=1\resetDivNumbers\noteNumber=0\vfill\eject}{\relax}
+\SGMLelement{back}{\resetDivNumbers\noteNumber=0\vfill\eject}{\relax}
+
+%% tables
+%%
+%% TODO: This doesn't handle <head> elements in <table> correctly.
+
+\def\beginTable{\medskip\halign\bgroup####\hskip1em\hfill&&####\hskip1em\hfill\cr}
+\def\endTable{\cr\egroup\medskip}
+\def\beginRow{\cr}
+\def\beginCell{&}
+
+\SGMLelement{table}{\bgroup\beginTable}{\endTable\egroup}
+\SGMLelement{row}{\beginRow}{\relax}
+\SGMLelement{cell}{\beginCell}{\relax}
+
+\def\tableHead{\noalign\bgroup\bf}
+
+\def\beginList{\medskip}
+\def\endList{\medskip}
+
+\SGMLelement{list}{\beginList}{\endList}
+\SGMLelement{item}{\item{$\bullet$}}{\relax}
+
+%% The TEI header
+
+\SGMLelement{teiHeader}{\hrule {\bf TEI header}\smallskip}{\smallskip\hrule}
+\SGMLelement{publicationStmt}{\smallskip{\it Published by: }}{\smallskip}
+\SGMLelement{availability}{\smallskip{\it Availability: }}{\smallskip}
+\SGMLelement{sourceDesc}{\smallskip{\it Source: }}{\smallskip}
+\SGMLelement{encodingDesc}{\smallskip{\it Encoding: }}{\smallskip}
+\SGMLelement{revisionDesc}{\smallskip{\it Revision History: }}{\smallskip}
+\SGMLelement{change}{\item}{\relax}
+
+%% end

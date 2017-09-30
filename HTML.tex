@@ -1,0 +1,65 @@
+% HTML.tex
+% copyright 1994 Jeroen Hellingman
+
+% The following definitions are for (a subset of) HTML
+
+% paragraphs and lines
+
+\SGMLelement{p}{\vskip0pt\hskip0pt}{\relax}		% <p> will start a new paragraph
+
+\def\newline{\ifhmode\hfill\break\fi}
+\SGMLelement{l}{\newline}{\relax}				% <l> will start a new line
+
+% headings
+
+\def\headingI{\bgroup\noindent\twelvebf}
+\def\endheadingI{\egroup\bigskip}
+\SGMLelement{h1}{\headingI}{\endheadingI}
+
+\def\headingII{\bgroup\noindent\bf}
+\def\endheadingII{\egroup\medskip}
+\SGMLelement{h2}{\headingII}{\endheadingII}
+
+\def\headingIII{\bgroup\noindent\bf}
+\def\endheadingIII{\egroup\medskip}
+\SGMLelement{h3}{\headingIII}{\endheadingIII}
+
+% styles
+
+\SGMLelement{em}{\bgroup\it}{\/\egroup}
+\SGMLelement{tt}{\bgroup\tt}{\egroup}
+\SGMLelement{i}{\bgroup\it}{\/\egroup}
+\SGMLelement{b}{\bgroup\bf}{\egroup}
+
+% lists, numbered and unnumbered
+
+\newif\ifitemnumbered\itemnumberedfalse
+\newcount\itemnumber\itemnumber=1
+
+\newcount\itemlevel\itemlevel=0
+\newif\ifitemitemnumbered\itemitemnumberedfalse
+\newcount\itemitemnumber\itemitemnumber=1
+
+\def\ulist{\medskip\bgroup\itemnumberedfalse\parindent=1cm}
+\def\endulist{\egroup\medskip}
+\SGMLelement{ul}{\ulist}{\endulist}
+
+\def\nlist{\medskip\bgroup\itemnumberedtrue\parindent=1cm}
+\def\endnlist{\egroup\medskip}
+\SGMLelement{nl}{\nlist}{\endnlist}
+
+\def\li{\ifitemnumbered\item{\the\itemnumber.}\advance\itemnumber by1\else\item{$\bullet$}\fi}
+\def\endli{\relax}
+\SGMLelement{li}{\li}{\endli}
+
+% some additional stuff for testing
+
+\newcount\noteNumber\noteNumber=0
+%\def\note{\advance\noteNumber by1\footnote{$^{\the\noteNumber}$}\bgroup}
+
+\def\note{\advance\noteNumber by1\footnote{$^{\theAttr{n}}$}\bgroup}
+
+
+\SGMLelement{note}{\note}{\egroup}
+
+%%%% eof %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

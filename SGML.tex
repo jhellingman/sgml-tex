@@ -1,0 +1,138 @@
+% SGML-TeX: make TeX understand (bare bones) SGML.
+% copyright 1994, 1999 Jeroen Hellingman. This work may be distributed under the
+% conditions of the GNU General Public License.
+%
+% TeX has been used as a typesetting engine for documents marked up with SGML. Mostly,
+% this was accomplished with the use of a pre-processor, however, it is also possible
+% for TeX to format documents with SGML mark-up directly. This file shows some simple
+% TeX-hacks to demonstrate how TeX can parse SGML in a very limited way.
+%
+% These macros are not intended to produce CRC from SGML source, but only to have
+% an acceptable output straight from SGML, such that works can be printed and
+% proof read without the need of advanced (and expensive) tools.
+%
+% A more sophisticated solution will require a parser build in TeX, and is far more
+% complicated than this, and a pre-processor may prove faster in that case.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%% Start trickery %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Entities
+%
+% entity names are prefixed with :: to avoid clashing with TeX's
+% macros. An entity &test; will call the macro \::test (which is inaccessible in
+% Plain TeX.)
+
+\def\SGMLentity#1#2{\expandafter\xdef\csname::#1\endcsname{\noexpand#2}}%
+\def\SGMLamp#1;{\csname::#1\endcsname}
+
+% Elements
+%
+% the macros for element names are prefixed with : to avoid clashing with TeX's
+% macros. A tag <test> will call the macro \:test, and the tag </test> will call
+% \:/test (which are both inaccessible from Plain TeX.)
+
+\long\def\SGMLelement#1#2#3{\expandafter\xdef\csname:#1\endcsname{\noexpand#2}%
+  \expandafter\xdef\csname:/#1\endcsname{\noexpand#3}}%
+
+% Parsing of Tags
+%
+% The tag is the first word following the <, up to a space or >. As we only want
+% to deal with a single case, we append a space and a special marker at the end
+% of the tag.
+
+\def\SGMLtag#1{\ifx#1!\skipTag#1\else\processTag#1\fi}
+\long\def\skipTag#1>{\fi\relax}         % for some odd reason, this \fi is needed.
+\def\processTag#1>{\spacedtag#1 @>}     % consume till closing >
+\def\spacedtag#1 #2>{\parseAttrs#2@>\dotag{#1}\relax}   % consume till first space, flush rest
+\def\dotag#1{\csname:#1\endcsname}      % call macro
+
+% Parsing of Attributes
+%
+% In SGML, attributes can either have quotes or not. We handle both cases.
+% Attributes are defined with ::: as prefix, and are accessible as long as
+% they are not redefined, for example in a following element.
+% attributes can be accessed by saying \theAttr{name} in macros
+
+\def\parseAttrs#1#2>{\ifx#1@\else\parseAttr#1#2>\fi}
+\def\parseAttr#1=#2#3>{\ifx#2"\parseQuotedAttr#1=#2#3>\else
+    \parseUnquotedAttr#1=#2#3>\fi}
+\def\parseQuotedAttr#1="#2" #3>{\setAttr#1=#2@>\parseAttrs#3>}
+\def\parseUnquotedAttr#1=#2 #3>{\setAttr#1=#2@>\parseAttrs#3>}
+\def\setAttr#1=#2@>{\expandafter\xdef\csname:::#1\endcsname{#2}}
+\def\theAttr#1{\csname:::#1\endcsname}
+\def\resetAttr#1{\xdef\csname:::#1\endcsname{{\bf[unknown]}\message{reset attribute accessed}}}
+\def\setAttrTo#1#2{\xdef\csname:::#1\endcsname{#2}}
+
+%%%%% changing catcodes
+
+{\catcode`<=\active\gdef<{\SGMLtag}}
+{\catcode`&=\active\gdef&{\SGMLamp}}
+
+\def\SGML{%
+  \catcode`\\=12    % make TeX specials normal characters
+  \catcode`\#=12
+  \catcode`\$=12
+  \catcode`\%=12
+  \catcode`\}=12
+  \catcode`\{=12
+  \catcode`\_=12
+  \catcode`\^=12
+  \catcode`\~=12
+  \catcode`0=11\catcode`1=11\catcode`2=11\catcode`3=11\catcode`4=11%
+  \catcode`5=11\catcode`6=11\catcode`7=11\catcode`8=11\catcode`9=11%
+  \catcode`&=13     % make & and < active
+  \catcode`<=13
+}
+
+\def\inputSGML #1 {\begingroup\SGML\input #1\endgroup}
+
+% The following file defines a large number of common SGML entities.
+
+\input SGMLentities
+
+%%%% SGML elements %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This is how to add TeX commands to a certain SGML element.
+% When you define your own elements, take care of the following:
+% - First define the macros you are going to use, and then call \SGMLelement.
+% - Tags not defined will be ignored, the elements will have default lay-out.
+
+\def\beginsgml{\relax}
+\def\endsgml{\relax}
+\SGMLelement{sgml}{\beginsgml}{\endsgml}
+
+% this is how to skip (i.e. fold away) an unwanted element. Note that this will
+% only work if the end tag is not omitted.
+
+\def\skipElement{\bgroup\setbox0=\hbox\bgroup}
+\def\endSkipElement{\egroup\relax\egroup}
+
+\SGMLelement{skipElement}{\skipElement}{\endSkipElement}
+
+% Accessing TeX
+%
+% we want to be able to use TeX constructs in our SGML document, and have them
+% typeset as before. Before the closing </tex> you will have to say
+% \SGML to revive the SGML conventions. (still looking for a trick to
+% avoid this)
+
+\def\beginTeX{% set the catcodes back to plain TeX conventions
+  \catcode`&=4
+  \catcode`\\=0
+  \catcode`\#=6
+  \catcode`\$=3
+  \catcode`\%=14
+  \catcode`\}=2
+  \catcode`\{=1
+  \catcode`\_=8
+  \catcode`\^=7
+  \catcode`\~=13
+  \catcode`0=12\catcode`1=12\catcode`2=12\catcode`3=12\catcode`4=12%
+  \catcode`5=12\catcode`6=12\catcode`7=12\catcode`8=12\catcode`9=12%
+  \catcode`<=12}
+\def\endTeX{\relax}
+\SGMLelement{tex}{\beginTeX}{\endTeX}
+
+%%%% eof %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
